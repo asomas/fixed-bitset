@@ -26,7 +26,7 @@
 //! ```
 
 #![deny(missing_docs)]
-
+mod test_lib;
 mod primitive;
 
 use std::ops::*;
@@ -189,6 +189,20 @@ impl<N, B> Bitset<N, B>
         let (block, shift) = Self::loc(value);
 
         self.blocks[block] &= !(B::one() << shift);
+    }
+
+
+    /// Increases every element in the set by 1, equivelant to a right shift.  
+    ///  ///Values that are too large to fit in the set are dropped, right most bit is dropped.
+    ///
+    ///
+    pub fn shift_up(&mut self) {
+        for block in (1..self.blocks.len()).rev() {
+            self.blocks[block] = self.blocks[block] << 1;
+            let prev_block_first_bit = self.blocks[block-1] & (B::one() << B::SIZE -1);
+            self.blocks[block] |= prev_block_first_bit >> B::SIZE -1 ;
+        }
+        self.blocks[0] = self.blocks[0] << 1;
     }
 
     /// Returns `true` if the bitset contains no bits.
