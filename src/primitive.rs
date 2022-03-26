@@ -3,27 +3,29 @@ use std::ops::*;
 use num_traits::{PrimInt, WrappingShl, WrappingSub};
 use typenum::consts::*;
 use typenum::operator_aliases::*;
-use typenum::{Unsigned, bit::B1};
+use typenum::{bit::B1, Unsigned};
 
 pub trait CeilDiv<Q> {
     type Output;
 }
 
 impl<T, Q> CeilDiv<Q> for T
-    where Q: Sub<B1>,
-          T: Add<Sub1<Q>>,
-          Sum<T, Sub1<Q>>: Div<Q>,
+where
+    Q: Sub<B1>,
+    T: Add<Sub1<Q>>,
+    Sum<T, Sub1<Q>>: Div<Q>,
 {
     type Output = Quot<Sum<T, Sub1<Q>>, Q>;
 }
 
-pub trait Primitive: PrimInt
-                   + Default
-                   + WrappingShl
-                   + WrappingSub
-                   + BitOrAssign<Self>
-                   + BitAndAssign<Self>
-                   + BitXorAssign<Self>
+pub trait Primitive:
+    PrimInt
+    + Default
+    + WrappingShl
+    + WrappingSub
+    + BitOrAssign<Self>
+    + BitAndAssign<Self>
+    + BitXorAssign<Self>
 {
     type Size: Unsigned;
 
@@ -57,4 +59,3 @@ primitives! {
     #[cfg(target_pointer_width = "64")]
     usize => U64,
 }
-

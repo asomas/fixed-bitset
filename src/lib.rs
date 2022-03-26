@@ -26,22 +26,23 @@
 //! ```
 
 #![deny(missing_docs)]
-mod test_lib;
 mod primitive;
+mod test_lib;
 
 use std::ops::*;
 use std::{fmt, iter};
 
-use generic_array::{GenericArray, ArrayLength};
+use generic_array::{ArrayLength, GenericArray};
 use typenum::Unsigned;
 
-use self::primitive::{Primitive, CeilDiv};
+use self::primitive::{CeilDiv, Primitive};
 
 type CeilQuot<T, Q> = <T as CeilDiv<Q>>::Output;
 
 /// Yields the index of each set bit in this block.
 fn bits<B>(mut block: B) -> impl Iterator<Item = usize> + Clone
-    where B: Primitive
+where
+    B: Primitive,
 {
     iter::from_fn(move || {
         if block.is_zero() {
@@ -59,29 +60,30 @@ fn bits<B>(mut block: B) -> impl Iterator<Item = usize> + Clone
 /// A `Bitset` can only store unsigned integers less than `N`, where `N` is a compile-time integer
 /// from `typenum`. A `Bitset` uses a single bit to indicate the presence or absence of each value.
 pub struct Bitset<N, B = usize>
-    where B: Primitive,
-          N: CeilDiv<B::Size>,
-          CeilQuot<N, B::Size>: ArrayLength<B>,
+where
+    B: Primitive,
+    N: CeilDiv<B::Size>,
+    CeilQuot<N, B::Size>: ArrayLength<B>,
 {
     blocks: GenericArray<B, CeilQuot<N, B::Size>>,
 }
 
 impl<N, B> fmt::Debug for Bitset<N, B>
-    where B: Primitive,
-          N: Unsigned + CeilDiv<B::Size>,
-          CeilQuot<N, B::Size>: ArrayLength<B>,
+where
+    B: Primitive,
+    N: Unsigned + CeilDiv<B::Size>,
+    CeilQuot<N, B::Size>: ArrayLength<B>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_set()
-            .entries(self.iter())
-            .finish()
+        f.debug_set().entries(self.iter()).finish()
     }
 }
 
 impl<N, B> Default for Bitset<N, B>
-    where B: Primitive,
-          N: CeilDiv<B::Size>,
-          CeilQuot<N, B::Size>: ArrayLength<B>,
+where
+    B: Primitive,
+    N: CeilDiv<B::Size>,
+    CeilQuot<N, B::Size>: ArrayLength<B>,
 {
     fn default() -> Self {
         Bitset {
@@ -91,9 +93,10 @@ impl<N, B> Default for Bitset<N, B>
 }
 
 impl<N, B> Clone for Bitset<N, B>
-    where B: Primitive,
-          N: CeilDiv<B::Size>,
-          CeilQuot<N, B::Size>: ArrayLength<B>,
+where
+    B: Primitive,
+    N: CeilDiv<B::Size>,
+    CeilQuot<N, B::Size>: ArrayLength<B>,
 {
     fn clone(&self) -> Self {
         Bitset {
@@ -103,16 +106,19 @@ impl<N, B> Clone for Bitset<N, B>
 }
 
 impl<N, B> Copy for Bitset<N, B>
-    where B: Primitive,
-          N: CeilDiv<B::Size>,
-          CeilQuot<N, B::Size>: ArrayLength<B>,
-          GenericArray<B, CeilQuot<N, B::Size>>: Copy,
-{}
+where
+    B: Primitive,
+    N: CeilDiv<B::Size>,
+    CeilQuot<N, B::Size>: ArrayLength<B>,
+    GenericArray<B, CeilQuot<N, B::Size>>: Copy,
+{
+}
 
 impl<N, B> PartialEq for Bitset<N, B>
-    where B: Primitive,
-          N: CeilDiv<B::Size>,
-          CeilQuot<N, B::Size>: ArrayLength<B>,
+where
+    B: Primitive,
+    N: CeilDiv<B::Size>,
+    CeilQuot<N, B::Size>: ArrayLength<B>,
 {
     fn eq(&self, other: &Self) -> bool {
         self.blocks == other.blocks
@@ -120,18 +126,22 @@ impl<N, B> PartialEq for Bitset<N, B>
 }
 
 impl<N, B> std::cmp::Eq for Bitset<N, B>
-    where B: Primitive,
-          N: CeilDiv<B::Size>,
-          CeilQuot<N, B::Size>: ArrayLength<B>,
-{}
+where
+    B: Primitive,
+    N: CeilDiv<B::Size>,
+    CeilQuot<N, B::Size>: ArrayLength<B>,
+{
+}
 
 impl<N, B> iter::FromIterator<usize> for Bitset<N, B>
-    where B: Primitive,
-          N: Unsigned + CeilDiv<B::Size>,
-          CeilQuot<N, B::Size>: ArrayLength<B>,
+where
+    B: Primitive,
+    N: Unsigned + CeilDiv<B::Size>,
+    CeilQuot<N, B::Size>: ArrayLength<B>,
 {
-    fn from_iter<T>(iter: T ) -> Self
-        where T: IntoIterator<Item = usize>
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = usize>,
     {
         let mut ret = Self::default();
         for n in iter.into_iter() {
@@ -143,9 +153,10 @@ impl<N, B> iter::FromIterator<usize> for Bitset<N, B>
 }
 
 impl<N, B> Bitset<N, B>
-    where B: Primitive,
-          N: Unsigned + CeilDiv<B::Size>,
-          CeilQuot<N, B::Size>: ArrayLength<B>,
+where
+    B: Primitive,
+    N: Unsigned + CeilDiv<B::Size>,
+    CeilQuot<N, B::Size>: ArrayLength<B>,
 {
     /// Returns an empty bitset.
     pub fn new() -> Self {
@@ -191,33 +202,41 @@ impl<N, B> Bitset<N, B>
         self.blocks[block] &= !(B::one() << shift);
     }
 
-
-    /// Increases every element in the set by 1, equivelant to a right shift.  
-    ///  ///Values that are too large to fit in the set are dropped, right most bit is dropped.
+    /// Increases every element in the set by 1, implemented using bit shifts.  
+    ///  ///Values that are too large to fit in the set are dropped.
     ///
     ///
     pub fn shift_up(&mut self) {
         for block in (1..self.blocks.len()).rev() {
             self.blocks[block] = self.blocks[block] << 1;
-            let prev_block_first_bit = self.blocks[block-1] & (B::one() << B::SIZE -1);
-            self.blocks[block] |= prev_block_first_bit >> B::SIZE -1 ;
+            let prev_block_first_bit = self.blocks[block - 1] & (B::one() << B::SIZE - 1);
+            self.blocks[block] |= prev_block_first_bit >> B::SIZE - 1;
         }
         self.blocks[0] = self.blocks[0] << 1;
     }
 
+    /// Decreases every element in the set by 1, using bit shifts.  
+    ///  ///Values that are too small to fit in the set (< 0) are dropped.
+    ///
+    ///
+    pub fn shift_down(&mut self) {
+        for block in 0..self.blocks.len() {
+            self.blocks[block] = self.blocks[block] >> 1;
+            if block + 1 < self.blocks.len() {
+                let next_block_last_bit = self.blocks[block + 1] & B::one();
+                self.blocks[block] |= next_block_last_bit << B::SIZE - 1;
+            }
+        }
+    }
+
     /// Returns `true` if the bitset contains no bits.
     pub fn is_empty(&self) -> bool {
-        self.blocks
-            .iter()
-            .all(|b| b.is_zero())
+        self.blocks.iter().all(|b| b.is_zero())
     }
 
     /// Returns the number of values contained in the bitset.
     pub fn len(&self) -> usize {
-        self.blocks
-            .iter()
-            .map(|b| b.count_ones() as usize)
-            .sum()
+        self.blocks.iter().map(|b| b.count_ones() as usize).sum()
     }
 
     /// Returns an iterator over the values in the bitset.
@@ -242,9 +261,11 @@ impl<N, B> Bitset<N, B>
         }
     }
 
-    fn iter_blocks<'a>(&'a self, other: &'a Self, f: impl 'a + Fn(B, B) -> B)
-        -> impl 'a + Iterator<Item = usize>
-    {
+    fn iter_blocks<'a>(
+        &'a self,
+        other: &'a Self,
+        f: impl 'a + Fn(B, B) -> B,
+    ) -> impl 'a + Iterator<Item = usize> {
         self.blocks
             .iter()
             .zip(other.blocks.iter())
